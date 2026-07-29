@@ -1,0 +1,9 @@
+mojo-easyexif is derived from EasyEXIF:
+https://github.com/mayanklahiri/easyexif
+
+EasyEXIF copyright (c) 2010-2015 Mayank Lahiri.
+EasyEXIF is distributed under the BSD 2-Clause License. Its license text is
+reproduced in vendor/easyexif/LICENSE.
+
+The JPEG files and matching .expected files under tests/data are copied from
+EasyEXIF's upstream test-images directory.
