@@ -155,7 +155,11 @@ def parse_many(
     offsets[0] = 0
     if len(chunks) > 1:
         np.cumsum(lengths[:-1], out=offsets[1:])
-    source = np.frombuffer(b"".join(chunks), dtype=np.uint8)
+    source = (
+        chunks[0]
+        if len(chunks) == 1
+        else np.frombuffer(b"".join(chunks), dtype=np.uint8)
+    )
     values = np.empty((len(chunks), _RESULT_SIZE), dtype=np.float64)
     statuses = np.empty(len(chunks), dtype=np.int64)
     code = lib().easyexif_parse_many(

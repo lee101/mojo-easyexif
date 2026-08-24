@@ -172,6 +172,7 @@ def test_zero_denominator_matches_upstream_rational_epsilon_choice():
 def test_parse_many_matches_scalar_results():
     images = [(DATA / name).read_bytes() for name in FIXTURES]
     assert exif.parse_many(images) == [exif.parse(image) for image in images]
+    assert exif.parse_many([memoryview(images[0])]) == [exif.parse(images[0])]
     buffers = [memoryview(images[0]), bytearray(images[1])]
     assert exif.parse_many(buffers) == [exif.parse(image) for image in buffers]
     assert exif.parse_many([]) == []

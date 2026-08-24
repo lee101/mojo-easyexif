@@ -142,6 +142,7 @@ def first_rational(
 
 
 # easyexif: exif.cpp EXIFInfo::parseFromEXIFSegment EXIF SubIFD loop
+@always_inline
 def parse_sub_ifd(
     buf: BPtr,
     offset: Int,
@@ -158,26 +159,27 @@ def parse_sub_ifd(
     var entry = offset + 2
     for _ in range(count):
         var tag = read_u16(buf, entry, align_intel)
-        var format = read_u16(buf, entry + 2, align_intel)
-        var value_count = read_u32(buf, entry + 4, align_intel)
-        if entry_is_valid(
-            buf, entry, base, length, align_intel, format, value_count
-        ):
-            if tag == 0x920A and format == 5:
-                result[2] = first_rational(
-                    buf, entry, base, length, align_intel, value_count
-                )
-            elif tag == 0xA405 and format == 3:
-                result[3] = Float64(
-                    first_short(
-                        buf,
-                        entry,
-                        base,
-                        length,
-                        align_intel,
-                        value_count,
+        if tag == 0x920A or tag == 0xA405:
+            var format = read_u16(buf, entry + 2, align_intel)
+            var value_count = read_u32(buf, entry + 4, align_intel)
+            if entry_is_valid(
+                buf, entry, base, length, align_intel, format, value_count
+            ):
+                if tag == 0x920A and format == 5:
+                    result[2] = first_rational(
+                        buf, entry, base, length, align_intel, value_count
                     )
-                )
+                elif tag == 0xA405 and format == 3:
+                    result[3] = Float64(
+                        first_short(
+                            buf,
+                            entry,
+                            base,
+                            length,
+                            align_intel,
+                            value_count,
+                        )
+                    )
         entry += 12
     return SUCCESS
 
@@ -272,6 +274,7 @@ def parse_gps_ifd(
 
 
 # easyexif: exif.cpp EXIFInfo::parseFromEXIFSegment
+@always_inline
 def parse_exif_segment(buf: BPtr, length: Int, result: FPtr) -> Int:
     if length < 6:
         return ERROR_NO_EXIF
@@ -312,26 +315,31 @@ def parse_exif_segment(buf: BPtr, length: Int, result: FPtr) -> Int:
     var entry = first_ifd + 2
     for _ in range(count):
         var tag = read_u16(buf, entry, align_intel)
-        var format = read_u16(buf, entry + 2, align_intel)
-        var value_count = read_u32(buf, entry + 4, align_intel)
-        if entry_is_valid(
-            buf, entry, base, length, align_intel, format, value_count
-        ):
-            if tag == 0x112 and format == 3:
-                result[1] = Float64(
-                    first_short(
-                        buf,
-                        entry,
-                        base,
-                        length,
-                        align_intel,
-                        value_count,
+        if tag == 0x112 or tag == 0x8769 or tag == 0x8825:
+            var format = read_u16(buf, entry + 2, align_intel)
+            var value_count = read_u32(buf, entry + 4, align_intel)
+            if entry_is_valid(
+                buf, entry, base, length, align_intel, format, value_count
+            ):
+                if tag == 0x112 and format == 3:
+                    result[1] = Float64(
+                        first_short(
+                            buf,
+                            entry,
+                            base,
+                            length,
+                            align_intel,
+                            value_count,
+                        )
                     )
-                )
-            elif tag == 0x8769:
-                exif_offset = base + read_u32(buf, entry + 8, align_intel)
-            elif tag == 0x8825:
-                gps_offset = base + read_u32(buf, entry + 8, align_intel)
+                elif tag == 0x8769:
+                    exif_offset = base + read_u32(
+                        buf, entry + 8, align_intel
+                    )
+                elif tag == 0x8825:
+                    gps_offset = base + read_u32(
+                        buf, entry + 8, align_intel
+                    )
         entry += 12
 
     if has_range(exif_offset, 4, length):

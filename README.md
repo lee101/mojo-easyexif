@@ -100,13 +100,13 @@ of five runs and include the same ctypes boundary and result writes for both
 implementations.
 
 Measured on an Intel Xeon E5-2697 v4 system (2 sockets, 36 physical cores,
-72 threads), Linux x86-64, Mojo `1.0.0b3.dev2026072406`, GCC 14.3.0:
+72 threads), Linux x86-64, Mojo `1.1.0.dev2026081105`, GCC 14.3.0:
 
 | case | Mojo (us/image) | EasyEXIF C++ (us/image) | C++ / Mojo |
 |---|---:|---:|---:|
-| single GPS JPEG | 6.431 | 8.398 | 1.31x |
-| batch 1,000 GPS JPEGs | 0.354 | 2.503 | 7.07x |
-| batch 1,000 mixed fixtures | 0.224 | 1.767 | 7.89x |
+| single GPS JPEG | 3.967 | 6.478 | 1.63x |
+| batch 1,000 GPS JPEGs | 0.184 | 2.448 | 13.31x |
+| batch 1,000 mixed fixtures | 0.129 | 1.746 | 13.56x |
 
 A ratio above `1x` means the Mojo port was faster. The larger batch advantage
 comes from one FFI crossing and from the port storing only the covered fields;
@@ -114,5 +114,15 @@ the upstream object also constructs strings and temporary STL containers for
 the broader metadata set.
 
 The implementation clears result rows with unaligned-safe `float64` SIMD
-stores plus a scalar tail. Batch parsing is serial and packs the input buffers
-once before entering Mojo. No GPU path is provided.
+stores plus a scalar tail. The IFD walks decode formats, counts, and external
+offsets only for tags represented by the result schema, and the EXIF dispatch
+path is inlined. A singleton batch crosses the FFI boundary zero-copy; larger
+batches are packed once before entering Mojo.
+
+Batch parsing remains serial because it was already more than 5x faster than
+the reference before this optimization pass, so it was not a parallelization
+target. No GPU path is provided: EXIF parsing consists almost entirely of byte
+loads, comparisons, branches, and range checks, with only a few rational
+divisions per image. Its arithmetic intensity is far below the roughly 2
+flops-per-byte threshold at which device transfer and launch overhead could be
+justified.
